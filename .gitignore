@@ -50,3 +50,6 @@ htmlcov/
 # Operating System files
 .DS_Store
 Thumbs.db
+
+# Others
+*.docx
