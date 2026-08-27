@@ -1,8 +1,3 @@
-"""
-Inference Service & Cybersecurity Decision Engine.
-Loads serialized ML model, calculates fraud risk probabilities, and outputs actionable decisions.
-"""
-
 import os
 import uuid
 from typing import Dict, Any, List
@@ -11,6 +6,10 @@ import pandas as pd
 
 from backend.app.core.config import settings
 from backend.app.schemas.transaction import TransactionCreate
+from backend.app.services.velocity_engine import velocity_engine
+from backend.app.services.graph_engine import graph_engine
+from backend.app.services.shap_explainer import shap_explainer
+from backend.app.services.drift_monitor import drift_monitor
 
 
 class FraudInferenceEngine:
@@ -39,7 +38,8 @@ class FraudInferenceEngine:
 
     def evaluate_transaction(self, txn: TransactionCreate) -> Dict[str, Any]:
         """
-        Takes a transaction input, prepares features, runs inference, and returns risk & decision.
+        Takes a transaction input, prepares features, runs inference, velocity analysis,
+        graph mule detection, and SHAP XAI, returning a comprehensive intelligence report.
         """
         data_dict = {
             'step': [txn.step],
@@ -54,15 +54,79 @@ class FraudInferenceEngine:
         }
         df = pd.DataFrame(data_dict)
 
-        # 1. Generate ML Risk Score (Probability of Fraud: 0.0 to 1.0)
+        # 1. Base ML Model Prediction (0.0 to 1.0)
         try:
             probabilities = self._model.predict_proba(df)[0]
-            risk_score = float(probabilities[1])
+            ml_risk_score = float(probabilities[1])
         except Exception as e:
             print(f"[INFERENCE] Prediction fallback: {e}")
-            risk_score = 0.05
+            ml_risk_score = 0.05
 
-        # 2. Cybersecurity Explanations
+        # 2. Behavioral Velocity & Impossible Travel Geo-Engine
+        vel_res = velocity_engine.record_and_evaluate(
+            account_id=txn.name_orig,
+            amount=txn.amount,
+            lat=txn.latitude,
+            lon=txn.longitude,
+            city=txn.location_city
+        )
+
+        # 3. Graph Analytics & Money Mule Ring Detection
+        temp_id = f"TXN-{uuid.uuid4().hex[:10].upper()}"
+        graph_res = graph_engine.add_transaction(
+            txn_id=temp_id,
+            orig_id=txn.name_orig,
+            dest_id=txn.name_dest,
+            amount=txn.amount,
+            risk_score=ml_risk_score,
+            is_fraud=(ml_risk_score > settings.BLOCK_THRESHOLD)
+        )
+
+        # 4. Deterministic Policy Rules Evaluation
+        from backend.app.services.policy_engine import policy_engine
+        from backend.app.core.database import SessionLocal
+        
+        policy_res = {"triggered_rules": [], "action_override": None, "total_risk_boost": 0.0, "policy_reasons": []}
+        db = SessionLocal()
+        try:
+            policy_res = policy_engine.evaluate_transaction_rules(
+                txn_dict={
+                    "step": txn.step,
+                    "type": txn.type,
+                    "amount": txn.amount,
+                    "oldbalance_orig": txn.oldbalance_orig,
+                    "newbalance_orig": txn.newbalance_orig,
+                    "name_orig": txn.name_orig,
+                    "name_dest": txn.name_dest,
+                    "geo_velocity_kmh": vel_res["geo_velocity_kmh"],
+                    "impossible_travel": vel_res["impossible_travel"],
+                    "velocity_count_5m": vel_res["count_5m"]
+                },
+                db=db
+            )
+        finally:
+            db.close()
+
+        # 5. Multi-Signal Risk Score Fusion
+        combined_risk = ml_risk_score + vel_res["velocity_risk_boost"] + graph_res["graph_risk_boost"] + policy_res["total_risk_boost"]
+        combined_risk = max(0.01, min(0.99, combined_risk))
+
+        # 6. Continuous Drift Monitor
+        transfer_ratio = txn.amount / (txn.oldbalance_orig + 1.0)
+        drift_monitor.record_evaluation(
+            amount=txn.amount,
+            transfer_ratio=transfer_ratio,
+            risk_score=combined_risk
+        )
+
+        # 7. Real-Time SHAP Feature Attribution
+        shap_res = shap_explainer.explain_transaction(
+            model_pipeline=self._model,
+            raw_df=df,
+            predicted_risk=combined_risk
+        )
+
+        # 8. Cybersecurity Reason Compilation
         flag_reasons: List[str] = []
         hour = txn.step % 24
         orig_err = (txn.newbalance_orig + txn.amount) - txn.oldbalance_orig
@@ -79,32 +143,58 @@ class FraudInferenceEngine:
         if 1 <= hour <= 5:
             flag_reasons.append(f"Off-Hours Activity: Transaction initiated at {hour:02d}:00 AM")
 
-        if txn.type.upper() in ['TRANSFER', 'CASH_OUT'] and risk_score > 0.4:
-            flag_reasons.append(f"High-Risk Channel: Fast liquidation channel ({txn.type.upper()})")
+        # Append velocity, graph, and policy reasons
+        flag_reasons.extend(vel_res["velocity_reasons"])
+        flag_reasons.extend(graph_res["graph_reasons"])
+        flag_reasons.extend(policy_res["policy_reasons"])
 
-        # 3. Decision Logic (3-Tier Framework)
-        if risk_score > settings.BLOCK_THRESHOLD:
+        # 9. Decision Logic (3-Tier Framework with Policy Action Override)
+        if policy_res["action_override"] == "FORCE_BLOCK":
             decision = "BLOCK"
             is_fraud = True
-            if not flag_reasons:
-                flag_reasons.append(f"Risk score ({risk_score*100:.1f}%) exceeds block threshold ({settings.BLOCK_THRESHOLD*100:.0f}%)")
-        elif risk_score >= settings.FLAG_THRESHOLD:
+            hitl_status = "PENDING_REVIEW"
+        elif policy_res["action_override"] == "REQUIRE_MFA":
             decision = "FLAG"
             is_fraud = False
+            hitl_status = "PENDING_REVIEW"
+        elif policy_res["action_override"] == "FAST_PASS":
+            decision = "APPROVE"
+            is_fraud = False
+            hitl_status = "AUTO_RESOLVED"
+        elif combined_risk > settings.BLOCK_THRESHOLD:
+            decision = "BLOCK"
+            is_fraud = True
+            hitl_status = "PENDING_REVIEW"
             if not flag_reasons:
-                flag_reasons.append(f"Risk score ({risk_score*100:.1f}%) requires step-up verification (OTP/MFA)")
+                flag_reasons.append(f"Risk score ({combined_risk*100:.1f}%) exceeds block threshold ({settings.BLOCK_THRESHOLD*100:.0f}%)")
+        elif combined_risk >= settings.FLAG_THRESHOLD:
+            decision = "FLAG"
+            is_fraud = False
+            hitl_status = "PENDING_REVIEW"
+            if not flag_reasons:
+                flag_reasons.append(f"Risk score ({combined_risk*100:.1f}%) requires step-up verification (OTP/MFA)")
         else:
             decision = "APPROVE"
             is_fraud = False
-            flag_reasons.append("Normal behavioral pattern verified by model")
+            hitl_status = "AUTO_RESOLVED"
+            if not flag_reasons:
+                flag_reasons.append("Normal behavioral pattern verified by model")
 
         return {
-            "transaction_id": f"TXN-{uuid.uuid4().hex[:10].upper()}",
-            "risk_score": round(risk_score, 4),
-            "risk_percentage": f"{round(risk_score * 100, 2)}%",
+            "transaction_id": temp_id,
+            "risk_score": round(combined_risk, 4),
+            "risk_percentage": f"{round(combined_risk * 100, 2)}%",
             "decision": decision,
             "is_fraud_predicted": is_fraud,
-            "flag_reasons": flag_reasons
+            "flag_reasons": flag_reasons,
+            "geo_velocity_kmh": vel_res["geo_velocity_kmh"],
+            "impossible_travel_flag": vel_res["impossible_travel"],
+            "velocity_count_5m": vel_res["count_5m"],
+            "velocity_sum_5m": vel_res["sum_5m"],
+            "graph_risk_score": graph_res["graph_risk_boost"],
+            "mule_cycle_detected": graph_res["cycle_detected"],
+            "shap_values": shap_res["waterfall_features"],
+            "hitl_status": hitl_status
         }
 
 

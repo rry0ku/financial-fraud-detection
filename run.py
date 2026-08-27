@@ -51,9 +51,15 @@ def bootstrap_system():
         if count == 0:
             print("[Step 3/4] Seeding initial sample transactions into database...")
             engine = FraudInferenceEngine()
+            import json
             
             df_seed = pd.read_csv(settings.DATA_PATH).head(35)
-            for _, row in df_seed.iterrows():
+            for idx, row in df_seed.iterrows():
+                cities = [("New York", "US", 40.7128, -74.0060, "192.168.1.101"),
+                          ("London", "UK", 51.5074, -0.1278, "81.2.69.142"),
+                          ("Tokyo", "JP", 35.6762, 139.6503, "133.242.18.9")]
+                city, country, lat, lon, ip = cities[idx % len(cities)]
+                
                 txn_input = TransactionCreate(
                     step=int(row['step']),
                     type=str(row['type']),
@@ -63,7 +69,12 @@ def bootstrap_system():
                     newbalance_orig=float(row['newbalanceOrig']),
                     name_dest=str(row['nameDest']),
                     oldbalance_dest=float(row['oldbalanceDest']),
-                    newbalance_dest=float(row['newbalanceDest'])
+                    newbalance_dest=float(row['newbalanceDest']),
+                    location_city=city,
+                    location_country=country,
+                    latitude=lat,
+                    longitude=lon,
+                    ip_address=ip
                 )
                 res = engine.evaluate_transaction(txn_input)
                 rec = TransactionRecord(
@@ -77,10 +88,23 @@ def bootstrap_system():
                     name_dest=txn_input.name_dest,
                     oldbalance_dest=txn_input.oldbalance_dest,
                     newbalance_dest=txn_input.newbalance_dest,
+                    location_city=city,
+                    location_country=country,
+                    latitude=lat,
+                    longitude=lon,
+                    ip_address=ip,
+                    geo_velocity_kmh=res.get("geo_velocity_kmh", 0.0),
+                    impossible_travel_flag=res.get("impossible_travel_flag", False),
+                    velocity_count_5m=res.get("velocity_count_5m", 1),
+                    velocity_sum_5m=res.get("velocity_sum_5m", 0.0),
                     risk_score=res["risk_score"],
                     decision=res["decision"],
                     is_fraud_predicted=res["is_fraud_predicted"],
-                    flag_reasons="; ".join(res["flag_reasons"])
+                    flag_reasons="; ".join(res["flag_reasons"]),
+                    shap_values_json=json.dumps(res.get("shap_values", [])),
+                    graph_risk_score=res.get("graph_risk_score", 0.0),
+                    mule_cycle_detected=res.get("mule_cycle_detected", False),
+                    hitl_status=res.get("hitl_status", "AUTO_RESOLVED")
                 )
                 db.add(rec)
             db.commit()

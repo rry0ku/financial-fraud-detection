@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Financial Fraud Detection Platform</title>
+    <title>FRAUD SHIELD — Autonomous Financial Surveillance & Threat Defense</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -12,9 +12,16 @@
             theme: {
                 extend: {
                     colors: {
-                        darkBg: '#0b0f19',
-                        cardBg: '#111827',
-                        borderBg: '#1f293d'
+                        cyberBase: '#030407',
+                        cyberCard: '#080a0f',
+                        cyberElevated: '#0e1118',
+                        cyberBorder: '#1a1f2c',
+                        cyberBorderMedium: '#262d3e',
+                        cyberPrimary: '#6366f1'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace']
                     }
                 }
             }
@@ -22,352 +29,1011 @@
     </script>
     <!-- Chart.js CDN -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Cytoscape.js for Money Mule Graph -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.28.1/cytoscape.min.js"></script>
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/style.css?v=2.5">
+    <style>
+        #cyGraph {
+            width: 100%;
+            height: 480px;
+            background-color: #040609;
+            border-radius: 8px;
+            border: 1px solid #1a1f2c;
+        }
+    </style>
 </head>
-<body class="bg-darkBg text-slate-100 min-h-screen font-sans antialiased">
+<body class="bg-[#030407] text-slate-100 min-h-screen font-sans antialiased selection:bg-indigo-600 selection:text-white">
 
-    <!-- Top Navigation -->
-    <header class="border-b border-borderBg bg-cardBg/90 backdrop-blur sticky top-0 z-50">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <div class="top-laser-line"></div>
+    <div class="ambient-glow"></div>
+
+    <!-- Top Command Navigation Header -->
+    <header class="border-b border-[#1a1f2c] bg-[#030407]/90 backdrop-blur-md sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
+            <!-- Brand Mark -->
             <div class="flex items-center space-x-3">
-                <div class="p-2 bg-indigo-600/20 text-indigo-400 rounded-lg border border-indigo-500/30">
-                    <i data-lucide="shield-check" class="w-5 h-5"></i>
+                <div class="w-8 h-8 rounded-lg bg-indigo-600/20 border border-indigo-500/30 flex items-center justify-center text-indigo-400">
+                    <i data-lucide="shield-check" class="w-4 h-4 text-indigo-400"></i>
                 </div>
                 <div>
-                    <h1 class="text-base font-bold tracking-wide text-white flex items-center gap-2">
-                        FRAUD DETECTION <span class="text-[11px] px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 font-semibold tracking-normal">AI ENGINE</span>
-                    </h1>
-                    <p class="text-[11px] text-slate-400">Transaction Risk Scoring System</p>
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-black tracking-wider text-white uppercase">FRAUD SHIELD</span>
+                    </div>
+                    <p class="text-[10px] text-slate-400 font-medium">Autonomous Transaction Surveillance & Threat Intelligence</p>
                 </div>
             </div>
 
-            <div class="flex items-center space-x-3">
-                <!-- Currency Switcher Dropdown (INR, USD, EUR, GBP) -->
-                <div class="flex items-center space-x-1.5 bg-slate-800/90 px-2.5 py-1 rounded-lg border border-slate-700">
+            <!-- Action Controls -->
+            <div class="flex items-center space-x-2.5">
+                <!-- Live Stream Toggle -->
+                <button id="streamToggleBtn" onclick="toggleLiveStream()" class="flex items-center space-x-2 bg-[#080a0f] hover:bg-[#0e1118] text-slate-300 px-3 py-1.5 rounded-lg border border-[#1a1f2c] text-xs font-semibold transition group">
+                    <span id="streamIndicator" class="w-2 h-2 rounded-full bg-slate-500"></span>
+                    <span id="streamLabel">Radar Stream: OFF</span>
+                    <span id="tpsBadge" class="hidden text-[10px] px-1.5 py-0.2 bg-indigo-500/20 text-indigo-300 rounded font-mono font-bold border border-indigo-500/30">0.0 TPS</span>
+                </button>
+
+                <!-- Currency Switcher -->
+                <div class="flex items-center space-x-1.5 bg-[#080a0f] px-2.5 py-1.5 rounded-lg border border-[#1a1f2c]">
                     <i data-lucide="coins" class="w-3.5 h-3.5 text-indigo-400"></i>
-                    <label for="currencySelector" class="text-[11px] font-medium text-slate-400 uppercase tracking-wider">Currency:</label>
-                    <select id="currencySelector" onchange="onCurrencyChange(this.value)" class="bg-transparent text-xs font-semibold text-white focus:outline-none cursor-pointer">
-                        <option value="INR" class="bg-slate-900 text-white">INR (₹)</option>
-                        <option value="USD" class="bg-slate-900 text-white" selected>USD ($)</option>
-                        <option value="EUR" class="bg-slate-900 text-white">EUR (€)</option>
-                        <option value="GBP" class="bg-slate-900 text-white">GBP (£)</option>
+                    <select id="currencySelector" onchange="onCurrencyChange(this.value)" class="bg-transparent text-xs font-semibold text-white focus:outline-none cursor-pointer border-none p-0">
+                        <option value="INR" class="bg-slate-950">INR (₹)</option>
+                        <option value="USD" class="bg-slate-950" selected>USD ($)</option>
+                        <option value="EUR" class="bg-slate-950">EUR (€)</option>
+                        <option value="GBP" class="bg-slate-950">GBP (£)</option>
                     </select>
                 </div>
 
-                <div id="modelBadge" class="hidden md:flex items-center space-x-2 text-xs bg-slate-800/80 px-3 py-1.5 rounded-full border border-slate-700">
-                    <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                    <span id="activeModelName" class="text-slate-300">Model: Initializing</span>
-                </div>
-                <a href="/docs" target="_blank" class="text-xs flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-lg border border-slate-700 transition">
-                    <i data-lucide="file-code" class="w-3.5 h-3.5 text-slate-400"></i>
-                    <span class="hidden sm:inline">API Reference</span>
+                <!-- API Reference -->
+                <a href="/docs" target="_blank" class="hidden sm:flex items-center gap-1.5 bg-[#080a0f] hover:bg-[#0e1118] text-slate-300 px-3 py-1.5 rounded-lg border border-[#1a1f2c] text-xs font-semibold transition">
+                    <i data-lucide="terminal" class="w-3.5 h-3.5 text-slate-400"></i>
+                    <span>Swagger API</span>
                 </a>
+
+                <!-- Reset System Environment Button -->
+                <button onclick="promptResetSystem()" id="resetSystemBtn" class="flex items-center gap-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 px-3 py-1.5 rounded-lg border border-rose-500/30 text-xs font-semibold transition group" title="Reset all transactions, graphs, and telemetry">
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5 text-rose-400 group-hover:rotate-[-45deg] transition-transform"></i>
+                    <span>Reset Environment</span>
+                </button>
             </div>
         </div>
     </header>
 
-    <!-- Main Container -->
-    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+    <!-- Main Content Workspace -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6 relative z-10">
 
-        <!-- KPI Metrics Grid -->
-        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            <!-- Card 1 -->
-            <div class="bg-cardBg border border-borderBg rounded-xl p-5 shadow-sm">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Total Processed</span>
-                    <div class="p-2 bg-blue-500/10 text-blue-400 rounded-lg"><i data-lucide="activity" class="w-4 h-4"></i></div>
+        <!-- Hero Section Header -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-[#1a1f2c] pb-5">
+            <div>
+                <span class="text-[10px] uppercase font-bold tracking-widest text-indigo-400 block mb-1">Financial Cyber Surveillance Engine</span>
+                <h2 class="text-xl sm:text-2xl font-extrabold text-white tracking-tight">
+                    Autonomous Transaction Surveillance & Threat Forensics
+                </h2>
+                <p class="text-xs text-slate-400 mt-1 max-w-2xl">Real-time risk scoring, impossible travel geo-velocity analysis, and directed money mule graph cycle detection.</p>
+            </div>
+            <!-- Latency Metric -->
+            <div class="flex items-center space-x-2 self-start md:self-auto bg-[#080a0f] border border-[#1a1f2c] px-3.5 py-2 rounded-xl">
+                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                <div class="text-left">
+                    <span class="text-[10px] text-slate-500 uppercase font-bold block">Inference Engine</span>
+                    <span class="text-xs font-mono font-bold text-white">&lt; 50ms Latency</span>
                 </div>
-                <div class="mt-3">
-                    <h3 id="kpiTotal" class="text-2xl font-bold text-white">0</h3>
-                    <p class="text-xs text-slate-400 mt-1">Total evaluated transactions</p>
+            </div>
+        </div>
+
+        <!-- 4-Card KPI Stat Strip -->
+        <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div class="cyber-card p-4">
+                <div class="flex items-center justify-between text-slate-400">
+                    <span class="text-[10px] font-bold uppercase tracking-wider">Total Evaluated</span>
+                    <div class="p-1.5 bg-blue-500/10 text-blue-400 rounded-md border border-blue-500/20"><i data-lucide="activity" class="w-3.5 h-3.5"></i></div>
+                </div>
+                <div class="mt-2.5 flex items-baseline justify-between">
+                    <h3 id="kpiTotal" class="text-2xl font-extrabold font-mono text-white">0</h3>
+                    <span class="text-[10px] text-slate-500 font-mono">100% Ingested</span>
                 </div>
             </div>
 
-            <!-- Card 2 -->
-            <div class="bg-cardBg border border-borderBg rounded-xl p-5 shadow-sm">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Approved</span>
-                    <div class="p-2 bg-emerald-500/10 text-emerald-400 rounded-lg"><i data-lucide="check-circle-2" class="w-4 h-4"></i></div>
+            <div class="cyber-card p-4">
+                <div class="flex items-center justify-between text-slate-400">
+                    <span class="text-[10px] font-bold uppercase tracking-wider">Frictionless Pass</span>
+                    <div class="p-1.5 bg-emerald-500/10 text-emerald-400 rounded-md border border-emerald-500/20"><i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i></div>
                 </div>
-                <div class="mt-3">
-                    <h3 id="kpiApproved" class="text-2xl font-bold text-emerald-400">0</h3>
-                    <p class="text-xs text-slate-400 mt-1">Score &lt; 0.30</p>
-                </div>
-            </div>
-
-            <!-- Card 3 -->
-            <div class="bg-cardBg border border-borderBg rounded-xl p-5 shadow-sm">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Flagged for Review</span>
-                    <div class="p-2 bg-amber-500/10 text-amber-400 rounded-lg"><i data-lucide="alert-triangle" class="w-4 h-4"></i></div>
-                </div>
-                <div class="mt-3">
-                    <h3 id="kpiFlagged" class="text-2xl font-bold text-amber-400">0</h3>
-                    <p class="text-xs text-slate-400 mt-1">Score 0.30 - 0.75</p>
+                <div class="mt-2.5 flex items-baseline justify-between">
+                    <h3 id="kpiApproved" class="text-2xl font-extrabold font-mono text-emerald-400">0</h3>
+                    <span class="text-[10px] text-emerald-500/80 font-mono">Score &lt; 0.30</span>
                 </div>
             </div>
 
-            <!-- Card 4 -->
-            <div class="bg-cardBg border border-borderBg rounded-xl p-5 shadow-sm">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Blocked</span>
-                    <div class="p-2 bg-rose-500/10 text-rose-400 rounded-lg"><i data-lucide="shield-x" class="w-4 h-4"></i></div>
+            <div class="cyber-card p-4">
+                <div class="flex items-center justify-between text-slate-400">
+                    <span class="text-[10px] font-bold uppercase tracking-wider">Flagged For Review</span>
+                    <div class="p-1.5 bg-amber-500/10 text-amber-400 rounded-md border border-amber-500/20"><i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i></div>
                 </div>
-                <div class="mt-3">
-                    <h3 id="kpiBlocked" class="text-2xl font-bold text-rose-400">0</h3>
-                    <p id="kpiFraudRate" class="text-xs text-slate-400 mt-1">Fraud Rate: 0.0%</p>
+                <div class="mt-2.5 flex items-baseline justify-between">
+                    <h3 id="kpiFlagged" class="text-2xl font-extrabold font-mono text-amber-400">0</h3>
+                    <span class="text-[10px] text-amber-400/80 font-mono">0.30 – 0.75 MFA</span>
+                </div>
+            </div>
+
+            <div class="cyber-card p-4">
+                <div class="flex items-center justify-between text-slate-400">
+                    <span class="text-[10px] font-bold uppercase tracking-wider">Threats Blocked</span>
+                    <div class="p-1.5 bg-rose-500/10 text-rose-400 rounded-md border border-rose-500/20"><i data-lucide="shield-x" class="w-3.5 h-3.5"></i></div>
+                </div>
+                <div class="mt-2.5 flex items-baseline justify-between">
+                    <h3 id="kpiBlocked" class="text-2xl font-extrabold font-mono text-rose-400">0</h3>
+                    <span id="kpiFraudRate" class="text-[10px] text-rose-400/80 font-mono">0.0% Rate</span>
                 </div>
             </div>
         </section>
 
-        <!-- Main Workspace: Simulator + Analytics -->
-        <section class="grid grid-cols-1 lg:grid-cols-12 gap-8">
-            
-            <!-- LEFT: Live Transaction Simulator (7 Cols) -->
-            <div class="lg:col-span-7 space-y-6">
-                <div class="bg-cardBg border border-borderBg rounded-xl p-6 shadow-sm">
-                    <div class="flex items-center justify-between mb-5">
-                        <div class="flex items-center space-x-2">
-                            <i data-lucide="sliders" class="w-4 h-4 text-indigo-400"></i>
-                            <h2 class="text-sm font-bold text-white uppercase tracking-wider">Transaction Scoring Simulator</h2>
-                        </div>
-                        <span class="text-xs text-slate-400">Real-Time Risk Analysis</span>
-                    </div>
+        <!-- Navigation Tabs Ribbon -->
+        <nav class="flex items-center space-x-1.5 border-b border-[#1a1f2c] pb-3 overflow-x-auto">
+            <button onclick="switchTab('simulator')" id="tabBtn-simulator" class="nav-tab-pill active">
+                <i data-lucide="terminal" class="w-4 h-4 text-indigo-400"></i>
+                <span>Workbench</span>
+            </button>
+            <button onclick="switchTab('threatmap')" id="tabBtn-threatmap" class="nav-tab-pill">
+                <i data-lucide="globe" class="w-4 h-4 text-sky-400"></i>
+                <span>Threat Map</span>
+            </button>
+            <button onclick="switchTab('graph')" id="tabBtn-graph" class="nav-tab-pill">
+                <i data-lucide="share-2" class="w-4 h-4 text-emerald-400"></i>
+                <span>Mule Graph</span>
+            </button>
+            <button onclick="switchTab('redteam')" id="tabBtn-redteam" class="nav-tab-pill">
+                <i data-lucide="swords" class="w-4 h-4 text-rose-400"></i>
+                <span>Red Team</span>
+            </button>
+            <button onclick="switchTab('rules')" id="tabBtn-rules" class="nav-tab-pill">
+                <i data-lucide="sliders" class="w-4 h-4 text-violet-400"></i>
+                <span>Policy Rules</span>
+            </button>
+            <button onclick="switchTab('batch')" id="tabBtn-batch" class="nav-tab-pill">
+                <i data-lucide="layers" class="w-4 h-4 text-amber-400"></i>
+                <span>Batch Benchmark</span>
+            </button>
+            <button onclick="switchTab('hitl')" id="tabBtn-hitl" class="nav-tab-pill">
+                <i data-lucide="user-check" class="w-4 h-4 text-amber-400"></i>
+                <span>Review Queue</span>
+                <span id="hitlBadge" class="text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.2 rounded-full font-mono font-bold">0</span>
+            </button>
+            <button onclick="switchTab('drift')" id="tabBtn-drift" class="nav-tab-pill">
+                <i data-lucide="bar-chart-3" class="w-4 h-4 text-cyan-400"></i>
+                <span>MLOps Drift</span>
+            </button>
+        </nav>
 
-                    <!-- Preset Scenarios -->
-                    <div class="mb-5">
-                        <label class="text-xs font-medium text-slate-300 block mb-2">Preset Test Scenarios:</label>
-                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs" id="presetContainer">
-                            <button type="button" onclick="loadPreset('coffee')" class="p-2.5 bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 rounded-lg border border-slate-700/80 transition text-left">
-                                <span class="font-semibold block text-slate-200">Point of Sale</span>
-                                <span class="text-[10px] text-emerald-400" id="presetCoffeeLabel">$4.50 Payment</span>
-                            </button>
-                            <button type="button" onclick="loadPreset('salary')" class="p-2.5 bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 rounded-lg border border-slate-700/80 transition text-left">
-                                <span class="font-semibold block text-slate-200">Direct Deposit</span>
-                                <span class="text-[10px] text-emerald-400" id="presetSalaryLabel">$3,200 Cash-In</span>
-                            </button>
-                            <button type="button" onclick="loadPreset('transfer')" class="p-2.5 bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 rounded-lg border border-slate-700/80 transition text-left">
-                                <span class="font-semibold block text-slate-200">High Transfer</span>
-                                <span class="text-[10px] text-amber-400" id="presetTransferLabel">$18,000 Volume</span>
-                            </button>
-                            <button type="button" onclick="loadPreset('drain')" class="p-2.5 bg-slate-800/80 hover:bg-slate-700/80 text-slate-200 rounded-lg border border-slate-700/80 transition text-left">
-                                <span class="font-semibold block text-slate-200">Account Drain</span>
-                                <span class="text-[10px] text-rose-400" id="presetDrainLabel">$95,000 (03:00 AM)</span>
-                            </button>
+        <!-- ================= TAB 1: SURVEILLANCE WORKBENCH ================= -->
+        <div id="tab-simulator" class="tab-content space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                <!-- Left Simulation Console (7 Cols) -->
+                <div class="lg:col-span-7 space-y-6">
+                    <div class="cyber-card p-5 sm:p-6 space-y-5">
+                        <div class="cyber-card-header">
+                            <div class="flex items-center space-x-2">
+                                <i data-lucide="sliders-horizontal" class="w-4 h-4 text-indigo-400"></i>
+                                <h3 class="text-xs font-bold text-white uppercase tracking-wider">Transaction Scoring Simulator</h3>
+                            </div>
+                            <span class="text-[10px] text-indigo-300 font-mono bg-[#05070a] px-2.5 py-0.5 rounded border border-[#1a1f2c]">Pipeline Active</span>
                         </div>
-                    </div>
 
-                    <!-- Input Form -->
-                    <form id="txnForm" class="space-y-4">
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Presets Selector -->
+                        <div>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-2">Preset Cyber Attack Scenarios:</span>
+                            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                                <button type="button" onclick="loadPreset('coffee')" class="scenario-card">
+                                    <span class="font-bold block text-white text-[11px]">Card Present POS</span>
+                                    <span class="text-[10px] text-emerald-400 font-mono">$4.50 Payment</span>
+                                </button>
+                                <button type="button" onclick="loadPreset('salary')" class="scenario-card">
+                                    <span class="font-bold block text-white text-[11px]">Direct Deposit</span>
+                                    <span class="text-[10px] text-emerald-400 font-mono">$3,200 Salary</span>
+                                </button>
+                                <button type="button" onclick="loadPreset('travel')" class="scenario-card">
+                                    <span class="font-bold block text-white text-[11px]">Impossible Travel</span>
+                                    <span class="text-[10px] text-amber-400 font-mono">NY &rarr; Tokyo 5m</span>
+                                </button>
+                                <button type="button" onclick="loadPreset('drain')" class="scenario-card">
+                                    <span class="font-bold block text-white text-[11px]">Account Drain</span>
+                                    <span class="text-[10px] text-rose-400 font-mono">$95k at 03:00 AM</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Form -->
+                        <form id="txnForm" class="space-y-3.5">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-300 block mb-1">Transaction Type</label>
+                                    <select id="formType">
+                                        <option value="TRANSFER">TRANSFER</option>
+                                        <option value="CASH_OUT">CASH_OUT</option>
+                                        <option value="PAYMENT">PAYMENT</option>
+                                        <option value="CASH_IN">CASH_IN</option>
+                                        <option value="DEBIT">DEBIT</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-300 block mb-1">Monetary Amount (<span class="currencySymbolDisplay">$</span>)</label>
+                                    <input type="number" step="0.01" id="formAmount" required class="font-mono font-bold" value="95000.00">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-300 block mb-1">Sender Balance Before (<span class="currencySymbolDisplay">$</span>)</label>
+                                    <input type="number" step="0.01" id="formOldOrig" required class="font-mono" value="95000.00">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-300 block mb-1">Sender Balance After (<span class="currencySymbolDisplay">$</span>)</label>
+                                    <input type="number" step="0.01" id="formNewOrig" required class="font-mono" value="0.00">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-300 block mb-1">Receiver Balance Before (<span class="currencySymbolDisplay">$</span>)</label>
+                                    <input type="number" step="0.01" id="formOldDest" required class="font-mono" value="0.00">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-300 block mb-1">Receiver Balance After (<span class="currencySymbolDisplay">$</span>)</label>
+                                    <input type="number" step="0.01" id="formNewDest" required class="font-mono" value="0.00">
+                                </div>
+                            </div>
+
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-300 block mb-1">Hour of Day (0–23)</label>
+                                    <input type="number" min="0" max="23" id="formHour" class="font-mono" value="3">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-300 block mb-1">Origin Account ID</label>
+                                    <input type="text" id="formOrigId" class="font-mono" value="C88219472">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-300 block mb-1">Destination Account ID</label>
+                                    <input type="text" id="formDestId" class="font-mono" value="C19028471">
+                                </div>
+                            </div>
+
+                            <!-- Geo Context -->
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-0.5">
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-300 block mb-1">City / Geolocation Context</label>
+                                    <input type="text" id="formCity" value="New York, US">
+                                </div>
+                                <div>
+                                    <label class="text-[11px] font-semibold text-slate-300 block mb-1">Originating IP Address</label>
+                                    <input type="text" id="formIp" class="font-mono" value="192.168.1.88">
+                                </div>
+                            </div>
+
+                            <button type="submit" id="submitBtn" class="btn-primary w-full mt-3 text-xs tracking-wider uppercase font-bold">
+                                <i data-lucide="zap" class="w-4 h-4"></i>
+                                <span>Evaluate AI Risk & Score Transaction</span>
+                            </button>
+                        </form>
+
+                        <!-- Holographic Verdict Box -->
+                        <div id="resultBox" class="mt-5 hidden cyber-card p-5 transition-all">
+                            <div class="flex items-center justify-between mb-3 border-b border-[#1a1f2c] pb-2.5">
+                                <div>
+                                    <span class="text-[9px] uppercase tracking-wider text-slate-400 font-bold">Surveillance Verdict</span>
+                                    <h3 id="resultTxnId" class="text-xs font-mono text-white font-bold">TXN-0000000000</h3>
+                                </div>
+                                <div class="flex items-center space-x-2">
+                                    <div id="decisionBadge" class="verdict-pill verdict-approve">APPROVE</div>
+                                    <button id="sarBtn" onclick="openSarModalForCurrent()" class="text-xs bg-[#0e1118] hover:bg-[#131722] text-indigo-300 px-3 py-1 rounded-lg border border-indigo-500/30 transition flex items-center gap-1.5 font-medium" title="Generate SAR Report">
+                                        <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                                        <span>SAR Report</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Risk Meter Gauge -->
+                            <div class="space-y-1.5 mb-4">
+                                <div class="flex justify-between text-xs font-semibold">
+                                    <span class="text-slate-300">Composite Fraud Probability:</span>
+                                    <span id="riskPercentageText" class="font-bold font-mono text-white text-sm">0.0%</span>
+                                </div>
+                                <div class="w-full bg-[#05070a] rounded-full h-2.5 overflow-hidden p-0.5 border border-[#1a1f2c]">
+                                    <div id="riskBarFill" class="h-full rounded-full transition-all duration-500 bg-emerald-500" style="width: 0%;"></div>
+                                </div>
+                                <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                                    <span>0% Approve</span>
+                                    <span>30% Step-Up MFA</span>
+                                    <span>75% Block</span>
+                                    <span>100% Critical</span>
+                                </div>
+                            </div>
+
+                            <!-- SHAP Waterfall Feature Attributions -->
+                            <div class="mb-3.5 pt-3 border-t border-[#1a1f2c]">
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <span class="text-xs font-bold text-white flex items-center gap-1.5">
+                                        <i data-lucide="bar-chart-horizontal" class="w-3.5 h-3.5 text-indigo-400"></i>
+                                        SHAP Mathematical Feature Attributions (XAI)
+                                    </span>
+                                    <span class="text-[10px] text-slate-400 font-mono">Base Risk: 2.0%</span>
+                                </div>
+                                <div class="h-32 relative">
+                                    <canvas id="shapChart"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- Telemetry Flags -->
                             <div>
-                                <label class="text-xs font-medium text-slate-300">Transaction Type</label>
-                                <select id="formType" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-1 focus:ring-indigo-500 focus:outline-none">
-                                    <option value="TRANSFER">TRANSFER</option>
-                                    <option value="CASH_OUT">CASH_OUT</option>
-                                    <option value="PAYMENT">PAYMENT</option>
-                                    <option value="CASH_IN">CASH_IN</option>
-                                    <option value="DEBIT">DEBIT</option>
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Security Telemetry Triggers:</span>
+                                <div id="reasonsList" class="flex flex-wrap gap-1.5"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Visual Threat Intelligence Console (5 Cols) -->
+                <div class="lg:col-span-5 space-y-6">
+                    <!-- Status Distribution Chart -->
+                    <div class="cyber-card p-5 space-y-3">
+                        <div class="cyber-card-header">
+                            <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                                <i data-lucide="pie-chart" class="w-3.5 h-3.5 text-indigo-400"></i>
+                                Decision Ratio Distribution
+                            </h3>
+                            <span class="text-[10px] text-slate-400 font-mono">Live Stream</span>
+                        </div>
+                        <div class="h-44 relative flex items-center justify-center">
+                            <canvas id="decisionChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Risk Histogram -->
+                    <div class="cyber-card p-5 space-y-3">
+                        <div class="cyber-card-header">
+                            <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                                <i data-lucide="bar-chart-2" class="w-3.5 h-3.5 text-cyan-400"></i>
+                                Risk Probability Density
+                            </h3>
+                            <span class="text-[10px] text-slate-400 font-mono">5 Buckets</span>
+                        </div>
+                        <div class="h-36 relative">
+                            <canvas id="riskDistributionChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Transaction Audit Log Table -->
+            <section class="cyber-card p-5 sm:p-6 space-y-4">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#1a1f2c] pb-3">
+                    <div class="flex items-center space-x-2">
+                        <i data-lucide="list-ordered" class="w-4 h-4 text-indigo-400"></i>
+                        <h3 class="text-xs font-bold text-white uppercase tracking-wider">Transaction Surveillance Audit Log</h3>
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        <input type="text" id="searchInput" placeholder="Search Account / Txn ID..." class="font-mono w-48 sm:w-56">
+                        <select id="filterDecision" class="w-auto">
+                            <option value="ALL">All Decisions</option>
+                            <option value="APPROVE">Approved Only</option>
+                            <option value="FLAG">Flagged Only</option>
+                            <option value="BLOCK">Blocked Only</option>
+                        </select>
+                        <button onclick="fetchAuditLog()" class="p-2 bg-[#05070a] hover:bg-[#0e1118] text-slate-300 rounded-lg border border-[#1a1f2c] transition" title="Refresh Audit Log">
+                            <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto rounded-lg border border-[#1a1f2c]">
+                    <table class="terminal-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Txn ID</th>
+                                <th>Type</th>
+                                <th>Amount</th>
+                                <th>Sender &rarr; Receiver</th>
+                                <th>Location</th>
+                                <th>Risk Score</th>
+                                <th>Decision</th>
+                                <th class="text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="txnTableBody" class="font-mono text-[11px]">
+                            <tr>
+                                <td colspan="9" class="text-center py-8 text-slate-500 font-sans">No transactions recorded yet.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        </div>
+
+        <!-- ================= TAB 2: GLOBAL THREAT ATTACK MAP ================= -->
+        <div id="tab-threatmap" class="tab-content hidden space-y-4">
+            <div class="cyber-card p-5 space-y-4">
+                <div class="cyber-card-header flex-wrap gap-3">
+                    <div>
+                        <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                            <i data-lucide="globe" class="w-4 h-4 text-sky-400"></i>
+                            Live Global Cyber Threat Attack Map (War Room)
+                        </h3>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Real-time cross-border transaction laser arcs, impossible travel velocity vectors, and geo-threat intercepts</p>
+                    </div>
+                    <div class="flex items-center space-x-2 font-mono text-[11px]">
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> Normal Flow</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Step-Up MFA</span>
+                        <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500 animate-pulse"></span> Blocked Attack</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    <div class="lg:col-span-9">
+                        <div id="threatMapContainer">
+                            <canvas id="threatMapCanvas"></canvas>
+                        </div>
+                    </div>
+                    <!-- Live Intercept Feed -->
+                    <div class="lg:col-span-3 bg-[#05070a] border border-[#1a1f2c] rounded-xl p-4 flex flex-col justify-between space-y-3">
+                        <div>
+                            <h4 class="text-xs font-bold text-white uppercase tracking-wider border-b border-[#1a1f2c] pb-2 flex items-center gap-2">
+                                <i data-lucide="radar" class="w-3.5 h-3.5 text-rose-400"></i>
+                                Live Geo Intercepts
+                            </h4>
+                            <div id="mapInterceptFeed" class="space-y-2 mt-3 text-xs text-slate-400 max-h-[380px] overflow-y-auto">
+                                <div class="p-2.5 rounded bg-[#080a0f] border border-[#1a1f2c] font-mono text-[10.5px]">
+                                    <span class="text-rose-400 font-bold block">🚨 TOKYO &rarr; NEW YORK</span>
+                                    <span class="text-slate-300 block mt-0.5">Speed: 10,850 km/h [BLOCKED]</span>
+                                    <span class="text-[9.5px] text-slate-500 block">IP: 133.242.18.9</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="pt-2 border-t border-[#1a1f2c] text-[10px] text-slate-500 font-mono">
+                            Vector Geodesic Arc Engine v2.0
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 3: MONEY MULE NETWORK GRAPH ================= -->
+        <div id="tab-graph" class="tab-content hidden space-y-4">
+            <div class="cyber-card p-5 space-y-4">
+                <div class="cyber-card-header flex-wrap gap-3">
+                    <div>
+                        <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                            <i data-lucide="share-2" class="w-4 h-4 text-emerald-400"></i>
+                            Money Mule & Circular Layering Network Graph
+                        </h3>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Directed multi-graph cycle detection ($A \to B \to C \to A$) and mule aggregator hubs</p>
+                    </div>
+
+                    <div class="flex items-center flex-wrap gap-2">
+                        <!-- Node Search Input -->
+                        <div class="relative">
+                            <input type="text" id="graphSearchInput" oninput="searchGraphNode(this.value)" placeholder="Search Account..." class="font-mono text-xs w-36 sm:w-44 py-1 px-2.5 bg-[#05070a] border border-[#1a1f2c] rounded-lg text-white">
+                        </div>
+
+                        <!-- Filter Chips -->
+                        <div class="flex items-center space-x-1 bg-[#05070a] p-0.5 rounded-lg border border-[#1a1f2c] text-[11px] font-semibold">
+                            <button onclick="filterGraphNodes('all')" id="filterGraph-all" class="px-2.5 py-1 rounded bg-[#0e1118] text-white">All</button>
+                            <button onclick="filterGraphNodes('mules')" id="filterGraph-mules" class="px-2.5 py-1 rounded text-slate-400 hover:text-white">Mule Rings</button>
+                            <button onclick="filterGraphNodes('high_risk')" id="filterGraph-high_risk" class="px-2.5 py-1 rounded text-slate-400 hover:text-white">High Risk</button>
+                        </div>
+
+                        <!-- Viewport Controls -->
+                        <div class="flex items-center space-x-1">
+                            <button onclick="zoomGraphIn()" class="p-1.5 bg-[#05070a] hover:bg-[#0e1118] text-slate-300 rounded-lg border border-[#1a1f2c] text-xs" title="Zoom In">
+                                <i data-lucide="zoom-in" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="zoomGraphOut()" class="p-1.5 bg-[#05070a] hover:bg-[#0e1118] text-slate-300 rounded-lg border border-[#1a1f2c] text-xs" title="Zoom Out">
+                                <i data-lucide="zoom-out" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="fitGraph()" class="p-1.5 bg-[#05070a] hover:bg-[#0e1118] text-slate-300 rounded-lg border border-[#1a1f2c] text-xs" title="Fit to Screen">
+                                <i data-lucide="maximize" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="loadGraphData()" class="flex items-center gap-1.5 text-xs bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 px-3 py-1.5 rounded-lg border border-indigo-500/30 transition font-semibold">
+                                <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+                                <span>Reload</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cytoscape Graph Canvas & Inspector -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    <div class="lg:col-span-9 space-y-2">
+                        <div id="cyGraph"></div>
+                        <div class="flex flex-wrap items-center gap-4 text-[11px] text-slate-400 pt-1 font-mono">
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> Legitimate Account</span>
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span> Suspect Mule Hub</span>
+                            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> High Risk Node</span>
+                            <span class="flex items-center gap-1.5"><span class="w-4 h-0.5 bg-rose-400"></span> Red Edge: Circular Layering Cycle</span>
+                        </div>
+                    </div>
+
+                    <!-- Graph Node Inspector -->
+                    <div class="lg:col-span-3 bg-[#05070a] border border-[#1a1f2c] rounded-xl p-4 space-y-3 flex flex-col justify-between">
+                        <div>
+                            <h4 class="text-xs font-bold text-white uppercase tracking-wider border-b border-[#1a1f2c] pb-2 flex items-center gap-2">
+                                <i data-lucide="search" class="w-3.5 h-3.5 text-indigo-400"></i>
+                                Forensic Inspector
+                            </h4>
+                            <div id="nodeInspectorContent" class="text-xs text-slate-400 space-y-2.5 mt-3">
+                                <p class="italic text-slate-500">Click on any account node or transaction edge to inspect degrees, flow imbalance, and mule risk scores.</p>
+                            </div>
+                        </div>
+                        <div class="pt-3 border-t border-[#1a1f2c] text-[10px] text-slate-500 font-mono">
+                            NetworkX Directed Algorithm v2.0
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 4: RED TEAM ATTACK SIMULATOR ================= -->
+        <div id="tab-redteam" class="tab-content hidden space-y-4">
+            <div class="cyber-card p-5 space-y-5">
+                <div class="cyber-card-header flex-wrap gap-3">
+                    <div>
+                        <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                            <i data-lucide="swords" class="w-4 h-4 text-rose-400"></i>
+                            Red Team Adversarial Attack Simulator & Defense Stress Test
+                        </h3>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Launch automated cyber attacks to benchmark machine learning boundary resilience and multi-layer interception rates</p>
+                    </div>
+                </div>
+
+                <!-- Attack Campaign Selector Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                    <div onclick="selectRedTeamCampaign('MICRO_SMURFING')" id="rtCard-MICRO_SMURFING" class="scenario-card p-4 border-indigo-500/50 bg-[#0e1118]">
+                        <span class="text-xs font-bold text-white block">Micro-Smurfing Swarm</span>
+                        <p class="text-[10.5px] text-slate-400 mt-1">120 rapid sub-$10 structured payments to evade AML thresholds.</p>
+                        <span class="text-[10px] text-indigo-300 font-mono block mt-2">Target: Velocity Counters</span>
+                    </div>
+                    <div onclick="selectRedTeamCampaign('ADVERSARIAL_EVASION')" id="rtCard-ADVERSARIAL_EVASION" class="scenario-card p-4">
+                        <span class="text-xs font-bold text-white block">Decision Evasion Attack</span>
+                        <p class="text-[10.5px] text-slate-400 mt-1">Perturbs origin balance ratios to probe XGBoost boundary.</p>
+                        <span class="text-[10px] text-amber-300 font-mono block mt-2">Target: ML Ensemble</span>
+                    </div>
+                    <div onclick="selectRedTeamCampaign('MULE_SWARM')" id="rtCard-MULE_SWARM" class="scenario-card p-4">
+                        <span class="text-xs font-bold text-white block">Coordinated Mule Swarm</span>
+                        <p class="text-[10.5px] text-slate-400 mt-1">Multi-account concurrent funneling into offshore aggregator hub.</p>
+                        <span class="text-[10px] text-emerald-300 font-mono block mt-2">Target: Graph Detectors</span>
+                    </div>
+                    <div onclick="selectRedTeamCampaign('HYPER_VELOCITY')" id="rtCard-HYPER_VELOCITY" class="scenario-card p-4">
+                        <span class="text-xs font-bold text-white block">Hypersonic Travel Hop</span>
+                        <p class="text-[10.5px] text-slate-400 mt-1">Intercontinental concurrent logins across 4 continents in 3 mins.</p>
+                        <span class="text-[10px] text-rose-300 font-mono block mt-2">Target: Geo-Velocity Engine</span>
+                    </div>
+                </div>
+
+                <!-- Launch Controls & Intensity -->
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-4 p-4 bg-[#05070a] border border-[#1a1f2c] rounded-xl">
+                    <div class="flex items-center space-x-3 w-full sm:w-auto">
+                        <label class="text-xs font-bold text-slate-300 whitespace-nowrap">Attack Intensity:</label>
+                        <input type="range" id="rtIntensity" min="20" max="150" value="60" oninput="document.getElementById('rtIntensityVal').textContent = this.value" class="w-36 sm:w-48 accent-indigo-500">
+                        <span id="rtIntensityVal" class="text-xs font-mono font-bold text-indigo-400">60</span>
+                        <span class="text-xs text-slate-400">Payloads</span>
+                    </div>
+
+                    <button onclick="launchRedTeamAttack()" id="launchRtBtn" class="btn-primary w-full sm:w-auto text-xs tracking-wider uppercase">
+                        <i data-lucide="play" class="w-4 h-4"></i>
+                        <span>Launch Adversarial Campaign</span>
+                    </button>
+                </div>
+
+                <!-- Battle Results & Defense Telemetry -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    <!-- Terminal Console -->
+                    <div class="lg:col-span-8 space-y-2">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Live Attack & Interception Telemetry:</span>
+                        <div class="battle-terminal" id="rtTerminalLogs">
+                            <span class="text-slate-500 italic">Select an offensive campaign and click "Launch Adversarial Campaign" to stress-test defense pipelines...</span>
+                        </div>
+                    </div>
+
+                    <!-- Defense Scorecard -->
+                    <div class="lg:col-span-4 space-y-3 bg-[#05070a] border border-[#1a1f2c] rounded-xl p-4 flex flex-col justify-between">
+                        <div>
+                            <h4 class="text-xs font-bold text-white uppercase tracking-wider border-b border-[#1a1f2c] pb-2 flex items-center gap-2">
+                                <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+                                Defense Resilience Score
+                            </h4>
+                            <div class="mt-4 text-center">
+                                <span id="rtDefenseScore" class="text-4xl font-extrabold font-mono text-emerald-400">--%</span>
+                                <span class="text-xs text-slate-400 block mt-1">Interception Rate</span>
+                            </div>
+                            <div class="mt-4 space-y-2 font-mono text-[10.5px]" id="rtAttributionList">
+                                <div class="flex justify-between text-slate-300">
+                                    <span>XGBoost ML Ensemble:</span>
+                                    <strong id="rtAttr-ml">--</strong>
+                                </div>
+                                <div class="flex justify-between text-slate-300">
+                                    <span>Impossible Travel Engine:</span>
+                                    <strong id="rtAttr-geo">--</strong>
+                                </div>
+                                <div class="flex justify-between text-slate-300">
+                                    <span>Money Mule Graph:</span>
+                                    <strong id="rtAttr-graph">--</strong>
+                                </div>
+                                <div class="flex justify-between text-slate-300">
+                                    <span>Policy Rules Engine:</span>
+                                    <strong id="rtAttr-rules">--</strong>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="pt-2 border-t border-[#1a1f2c] text-[10px] text-slate-500 font-mono">
+                            Continuous Red Teaming Benchmark v2.0
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 5: VISUAL POLICY RULES ENGINE ================= -->
+        <div id="tab-rules" class="tab-content hidden space-y-4">
+            <div class="cyber-card p-5 space-y-4">
+                <div class="cyber-card-header flex-wrap gap-3">
+                    <div>
+                        <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                            <i data-lucide="sliders" class="w-4 h-4 text-violet-400"></i>
+                            Deterministic Policy Rules Engine (Stripe Radar Style)
+                        </h3>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Configure low-latency deterministic heuristic logic and compliance rule overrides</p>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="openNewRuleModal()" class="btn-primary text-xs py-1.5 px-3">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                            <span>Add Custom Rule</span>
+                        </button>
+                        <button onclick="loadPolicyRules()" class="p-2 bg-[#05070a] hover:bg-[#0e1118] text-slate-300 rounded-lg border border-[#1a1f2c]">
+                            <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-x-auto rounded-lg border border-[#1a1f2c]">
+                    <table class="terminal-table">
+                        <thead>
+                            <tr>
+                                <th>Status</th>
+                                <th>Rule Code</th>
+                                <th>Rule Name & Description</th>
+                                <th>Condition Logic</th>
+                                <th>Enforced Action</th>
+                                <th>Priority</th>
+                                <th>Trigger Count</th>
+                                <th class="text-right">Manage</th>
+                            </tr>
+                        </thead>
+                        <tbody id="rulesTableBody" class="font-mono text-[11px]">
+                            <tr>
+                                <td colspan="8" class="text-center py-8 text-slate-500 font-sans">Loading active compliance policy rules...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ================= TAB 6: BATCH INGESTION & STRESS BENCHMARK ================= -->
+        <div id="tab-batch" class="tab-content hidden space-y-4">
+            <div class="cyber-card p-5 space-y-5">
+                <div class="cyber-card-header flex-wrap gap-3">
+                    <div>
+                        <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                            <i data-lucide="layers" class="w-4 h-4 text-amber-400"></i>
+                            High-Throughput Batch Ingestion & Stress Benchmarking
+                        </h3>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Bulk CSV dataset evaluation, multi-thousand transaction stress testing, and pipeline TPS measurement</p>
+                    </div>
+                    <a href="/api/v1/batch/sample-csv" download="sample_transactions.csv" class="text-xs bg-[#05070a] hover:bg-[#0e1118] text-slate-300 px-3 py-1.5 rounded-lg border border-[#1a1f2c] flex items-center gap-1.5">
+                        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                        <span>Download Sample CSV</span>
+                    </a>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- CSV Drag & Drop Upload Zone -->
+                    <div class="bg-[#05070a] border-2 border-dashed border-[#262d3e] hover:border-indigo-500/50 rounded-xl p-6 text-center space-y-3 transition">
+                        <div class="w-12 h-12 rounded-full bg-indigo-600/10 text-indigo-400 flex items-center justify-center mx-auto">
+                            <i data-lucide="upload-cloud" class="w-6 h-6"></i>
+                        </div>
+                        <div>
+                            <h4 class="text-xs font-bold text-white uppercase">Upload CSV Transaction Dataset</h4>
+                            <p class="text-[11px] text-slate-400 mt-1">Drag and drop or select a CSV file containing transaction records</p>
+                        </div>
+                        <input type="file" id="csvFileInput" accept=".csv" class="hidden" onchange="handleCsvFileSelected(this.files[0])">
+                        <button type="button" onclick="document.getElementById('csvFileInput').click()" class="px-4 py-2 bg-[#0e1118] hover:bg-[#131722] text-slate-200 text-xs rounded-lg border border-[#262d3e] font-semibold transition">
+                            Browse File
+                        </button>
+                    </div>
+
+                    <!-- Synthetic High-Scale Stress Benchmark -->
+                    <div class="bg-[#05070a] border border-[#1a1f2c] rounded-xl p-5 space-y-4">
+                        <h4 class="text-xs font-bold text-white uppercase flex items-center gap-2">
+                            <i data-lucide="gauge" class="w-4 h-4 text-cyan-400"></i>
+                            Synthetic High-Throughput Stress Runner
+                        </h4>
+                        <div class="grid grid-cols-2 gap-3 text-xs">
+                            <div>
+                                <label class="text-[11px] font-semibold text-slate-400 block mb-1">Batch Volume:</label>
+                                <select id="benchBatchSize">
+                                    <option value="500">500 Transactions</option>
+                                    <option value="1000" selected>1,000 Transactions</option>
+                                    <option value="2500">2,500 Transactions</option>
+                                    <option value="5000">5,000 Transactions</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="text-xs font-medium text-slate-300">Amount (<span class="currencySymbolDisplay">$</span>)</label>
-                                <input type="number" step="0.01" id="formAmount" required class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-1 focus:ring-indigo-500 focus:outline-none" value="95000.00">
+                                <label class="text-[11px] font-semibold text-slate-400 block mb-1">Fraud Ratio:</label>
+                                <select id="benchFraudRate">
+                                    <option value="0.05">5% Fraud Injected</option>
+                                    <option value="0.20" selected>20% Fraud Injected</option>
+                                    <option value="0.50">50% High Attack</option>
+                                </select>
                             </div>
                         </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label class="text-xs font-medium text-slate-300">Sender Balance Before (<span class="currencySymbolDisplay">$</span>)</label>
-                                <input type="number" step="0.01" id="formOldOrig" required class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-1 focus:ring-indigo-500 focus:outline-none" value="95000.00">
-                            </div>
-                            <div>
-                                <label class="text-xs font-medium text-slate-300">Sender Balance After (<span class="currencySymbolDisplay">$</span>)</label>
-                                <input type="number" step="0.01" id="formNewOrig" required class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-1 focus:ring-indigo-500 focus:outline-none" value="0.00">
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label class="text-xs font-medium text-slate-300">Receiver Balance Before (<span class="currencySymbolDisplay">$</span>)</label>
-                                <input type="number" step="0.01" id="formOldDest" required class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-1 focus:ring-indigo-500 focus:outline-none" value="0.00">
-                            </div>
-                            <div>
-                                <label class="text-xs font-medium text-slate-300">Receiver Balance After (<span class="currencySymbolDisplay">$</span>)</label>
-                                <input type="number" step="0.01" id="formNewDest" required class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-1 focus:ring-indigo-500 focus:outline-none" value="0.00">
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                            <div>
-                                <label class="text-xs font-medium text-slate-300">Hour of Day (0-23)</label>
-                                <input type="number" min="0" max="23" id="formHour" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-1 focus:ring-indigo-500 focus:outline-none" value="3">
-                            </div>
-                            <div>
-                                <label class="text-xs font-medium text-slate-300">Origin Account</label>
-                                <input type="text" id="formOrigId" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-1 focus:ring-indigo-500 focus:outline-none" value="C88219472">
-                            </div>
-                            <div>
-                                <label class="text-xs font-medium text-slate-300">Destination Account</label>
-                                <input type="text" id="formDestId" class="mt-1 w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:ring-1 focus:ring-indigo-500 focus:outline-none" value="C19028471">
-                            </div>
-                        </div>
-
-                        <button type="submit" id="submitBtn" class="w-full mt-4 bg-indigo-600 hover:bg-indigo-500 text-white font-medium py-2.5 px-4 rounded-lg flex items-center justify-center space-x-2 transition shadow-sm">
-                            <i data-lucide="shield" class="w-4 h-4"></i>
-                            <span>Evaluate Transaction</span>
+                        <button onclick="runSyntheticStressBenchmark()" id="runBenchBtn" class="btn-primary w-full text-xs uppercase font-bold">
+                            <i data-lucide="zap" class="w-4 h-4"></i>
+                            <span>Execute High-Scale Stress Test</span>
                         </button>
-                    </form>
+                    </div>
+                </div>
 
-                    <!-- Real-Time Evaluation Result Box -->
-                    <div id="resultBox" class="mt-6 hidden border rounded-xl p-5 transition-all">
-                        <div class="flex items-center justify-between mb-4">
-                            <div>
-                                <span class="text-xs uppercase tracking-wider text-slate-400 font-semibold">Evaluation Output</span>
-                                <h3 id="resultTxnId" class="text-sm font-mono text-slate-200">TXN-0000000000</h3>
-                            </div>
-                            <div id="decisionBadge" class="px-4 py-1.5 rounded-full text-xs font-bold tracking-wider border">
-                                APPROVE
-                            </div>
-                        </div>
-
-                        <!-- Risk Score Gauge Bar -->
-                        <div class="space-y-2 mb-4">
-                            <div class="flex justify-between text-xs font-medium">
-                                <span class="text-slate-300">Calculated Fraud Probability:</span>
-                                <span id="riskPercentageText" class="font-bold text-white text-sm">0.0%</span>
-                            </div>
-                            <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden p-0.5 border border-slate-700">
-                                <div id="riskBarFill" class="h-full rounded-full transition-all duration-500 bg-emerald-500" style="width: 0%;"></div>
-                            </div>
-                            <div class="flex justify-between text-[10px] text-slate-500 font-mono">
-                                <span>0% (Legitimate)</span>
-                                <span>30% (Flag Boundary)</span>
-                                <span>75% (Block Boundary)</span>
-                                <span>100% (Fraudulent)</span>
-                            </div>
-                        </div>
-
-                        <!-- Decision Factor Breakdown -->
-                        <div>
-                            <span class="text-xs font-medium text-slate-400 block mb-1.5">Decision Factor Breakdown:</span>
-                            <div id="reasonsList" class="flex flex-wrap gap-2"></div>
-                        </div>
+                <!-- Benchmark Results Metrics -->
+                <div id="batchResultsContainer" class="hidden grid grid-cols-1 sm:grid-cols-4 gap-4">
+                    <div class="gauge-card">
+                        <span class="text-[10px] uppercase font-bold text-slate-400">Peak Throughput</span>
+                        <h3 id="benchTps" class="text-2xl font-extrabold font-mono text-cyan-400 mt-1">0 TPS</h3>
+                        <span class="text-[10px] text-slate-500 font-mono">Async Batch Pipeline</span>
+                    </div>
+                    <div class="gauge-card">
+                        <span class="text-[10px] uppercase font-bold text-slate-400">P50 / Median Latency</span>
+                        <h3 id="benchP50" class="text-2xl font-extrabold font-mono text-emerald-400 mt-1">0.0ms</h3>
+                        <span class="text-[10px] text-slate-500 font-mono">Sub-Millisecond Inference</span>
+                    </div>
+                    <div class="gauge-card">
+                        <span class="text-[10px] uppercase font-bold text-slate-400">P95 Latency</span>
+                        <h3 id="benchP95" class="text-2xl font-extrabold font-mono text-amber-400 mt-1">0.0ms</h3>
+                        <span class="text-[10px] text-slate-500 font-mono">95th Percentile</span>
+                    </div>
+                    <div class="gauge-card">
+                        <span class="text-[10px] uppercase font-bold text-slate-400">Decisions Breakdown</span>
+                        <h3 id="benchDecisions" class="text-sm font-extrabold font-mono text-white mt-2">Pass: 0 | Block: 0</h3>
+                        <span class="text-[10px] text-slate-500 font-mono">Multi-Signal Enforced</span>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- RIGHT: Charts & Model Metrics (5 Cols) -->
-            <div class="lg:col-span-5 space-y-6">
-                <!-- Decision Breakdown Chart -->
-                <div class="bg-cardBg border border-borderBg rounded-xl p-5 shadow-sm">
-                    <div class="flex items-center justify-between mb-3">
+        <!-- ================= TAB 7: ANALYST REVIEW QUEUE (HITL) ================= -->
+        <div id="tab-hitl" class="tab-content hidden space-y-4">
+            <div class="cyber-card p-5 space-y-4">
+                <div class="cyber-card-header">
+                    <div>
                         <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                            <i data-lucide="pie-chart" class="w-3.5 h-3.5 text-indigo-400"></i>
-                            Decision Breakdown
+                            <i data-lucide="user-check" class="w-4 h-4 text-amber-400"></i>
+                            Human-in-the-Loop (HITL) Compliance Queue
                         </h3>
-                        <span class="text-[11px] text-slate-400">Status Distribution</span>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Triage borderline transactions (30%–75%), resolve false positives, or confirm fraud strikes</p>
                     </div>
-                    <div class="h-48 relative flex items-center justify-center">
-                        <canvas id="decisionChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Risk Distribution Histogram -->
-                <div class="bg-cardBg border border-borderBg rounded-xl p-5 shadow-sm">
-                    <div class="flex items-center justify-between mb-3">
-                        <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                            <i data-lucide="bar-chart-2" class="w-3.5 h-3.5 text-indigo-400"></i>
-                            Risk Score Distribution
-                        </h3>
-                        <span class="text-[11px] text-slate-400">Probability Buckets</span>
-                    </div>
-                    <div class="h-44 relative">
-                        <canvas id="riskDistributionChart"></canvas>
-                    </div>
-                </div>
-
-                <!-- Model Performance Card -->
-                <div id="modelMetricsCard" class="bg-cardBg border border-borderBg rounded-xl p-5 shadow-sm space-y-3">
-                    <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
-                        <i data-lucide="cpu" class="w-3.5 h-3.5 text-indigo-400"></i>
-                        Active Model Benchmark
-                    </h3>
-                    <div class="grid grid-cols-3 gap-2 text-center text-xs">
-                        <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
-                            <span class="text-slate-400 block text-[10px]">F1-SCORE</span>
-                            <span id="metricF1" class="font-bold text-indigo-400 text-sm">-</span>
-                        </div>
-                        <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
-                            <span class="text-slate-400 block text-[10px]">RECALL</span>
-                            <span id="metricRecall" class="font-bold text-emerald-400 text-sm">-</span>
-                        </div>
-                        <div class="bg-slate-900/80 p-2.5 rounded-lg border border-slate-800">
-                            <span class="text-slate-400 block text-[10px]">PRECISION</span>
-                            <span id="metricPrecision" class="font-bold text-amber-400 text-sm">-</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-        </section>
-
-        <!-- Transaction Audit Log Table -->
-        <section class="bg-cardBg border border-borderBg rounded-xl p-6 shadow-sm space-y-4">
-            <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div class="flex items-center space-x-2">
-                    <i data-lucide="list" class="w-4 h-4 text-indigo-400"></i>
-                    <h2 class="text-sm font-bold text-white uppercase tracking-wider">Transaction Audit Log</h2>
-                </div>
-
-                <!-- Filters -->
-                <div class="flex items-center space-x-2">
-                    <div class="relative">
-                        <input type="text" id="searchInput" placeholder="Search ID or Account..." class="bg-slate-900 border border-slate-700 rounded-lg pl-8 pr-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-500">
-                        <i data-lucide="search" class="w-3.5 h-3.5 text-slate-500 absolute left-2.5 top-2.5"></i>
-                    </div>
-
-                    <select id="filterDecision" class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none">
-                        <option value="ALL">All Decisions</option>
-                        <option value="APPROVE">Approved Only</option>
-                        <option value="FLAG">Flagged Only</option>
-                        <option value="BLOCK">Blocked Only</option>
-                    </select>
-
-                    <button onclick="fetchAuditLog()" class="p-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700 transition" title="Refresh Log">
-                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                    <button onclick="loadHitlQueue()" class="p-2 bg-[#05070a] hover:bg-[#0e1118] text-slate-300 rounded-lg border border-[#1a1f2c]">
+                        <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
                     </button>
                 </div>
-            </div>
 
-            <!-- Table -->
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs">
-                    <thead class="bg-slate-900/60 text-slate-400 uppercase font-semibold border-b border-slate-800">
-                        <tr>
-                            <th class="py-3 px-4">Timestamp</th>
-                            <th class="py-3 px-4">Transaction ID</th>
-                            <th class="py-3 px-4">Type</th>
-                            <th class="py-3 px-4">Amount</th>
-                            <th class="py-3 px-4">Sender &rarr; Receiver</th>
-                            <th class="py-3 px-4">Risk Probability</th>
-                            <th class="py-3 px-4">Decision</th>
-                        </tr>
-                    </thead>
-                    <tbody id="txnTableBody" class="divide-y divide-slate-800/60">
-                        <tr>
-                            <td colspan="7" class="text-center py-6 text-slate-500">No transactions recorded yet.</td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="overflow-x-auto rounded-lg border border-[#1a1f2c]">
+                    <table class="terminal-table">
+                        <thead>
+                            <tr>
+                                <th>Txn ID</th>
+                                <th>Type & Amount</th>
+                                <th>Origin &rarr; Dest</th>
+                                <th>Risk Score</th>
+                                <th>Primary Trigger Factors</th>
+                                <th class="text-right">Analyst Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="hitlTableBody" class="font-mono text-[11px]">
+                            <tr>
+                                <td colspan="6" class="text-center py-8 text-slate-500 font-sans">No transactions currently pending triage.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-        </section>
+        </div>
+
+        <!-- ================= TAB 8: MLOPS DRIFT WATCHER ================= -->
+        <div id="tab-drift" class="tab-content hidden space-y-4">
+            <div class="cyber-card p-5 space-y-4">
+                <div class="cyber-card-header">
+                    <div>
+                        <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                            <i data-lucide="bar-chart-3" class="w-4 h-4 text-cyan-400"></i>
+                            Continuous Concept Drift & Statistical Health
+                        </h3>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Population Stability Index (PSI) & Kolmogorov-Smirnov statistical shift detection</p>
+                    </div>
+                    <button onclick="loadDriftReport()" class="p-2 bg-[#05070a] hover:bg-[#0e1118] text-slate-300 rounded-lg border border-[#1a1f2c]">
+                        <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+
+                <!-- Drift Health Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4" id="driftCardsContainer">
+                    <div class="bg-[#05070a] p-4 rounded-xl border border-[#1a1f2c]">
+                        <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Amount Distribution Drift</span>
+                        <h4 class="text-xl font-bold font-mono text-white mt-1" id="driftAmtPsi">PSI: 0.015</h4>
+                        <span class="text-[11px] text-emerald-400 font-semibold block mt-1">● HEALTHY (&lt; 0.10)</span>
+                    </div>
+                    <div class="bg-[#05070a] p-4 rounded-xl border border-[#1a1f2c]">
+                        <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Transfer Ratio Drift</span>
+                        <h4 class="text-xl font-bold font-mono text-white mt-1" id="driftRatioPsi">PSI: 0.022</h4>
+                        <span class="text-[11px] text-emerald-400 font-semibold block mt-1">● HEALTHY (&lt; 0.10)</span>
+                    </div>
+                    <div class="bg-[#05070a] p-4 rounded-xl border border-[#1a1f2c]">
+                        <span class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Overall Model Stability</span>
+                        <h4 class="text-xl font-bold font-mono text-emerald-400 mt-1" id="driftOverallStatus">STABLE</h4>
+                        <span class="text-[11px] text-slate-500 block mt-1">No Model Retraining Required</span>
+                    </div>
+                </div>
+
+                <div class="bg-[#05070a] p-4 rounded-xl border border-[#1a1f2c] text-xs text-slate-300">
+                    <span class="font-bold text-white block mb-1">MLOps Recommendation Engine:</span>
+                    <p id="driftRecommendationText" class="text-slate-400 leading-relaxed">Model features are statistically aligned with the baseline training distribution. No concept drift detected.</p>
+                </div>
+            </div>
+        </div>
 
     </main>
 
-    <script src="/static/js/app.js"></script>
+    <!-- Create Custom Policy Rule Modal -->
+    <div id="ruleModal" class="fixed inset-0 bg-black/85 backdrop-blur-md hidden items-center justify-center z-50 p-4">
+        <div class="cyber-card max-w-lg w-full p-5 space-y-4 border border-[#262d3e]">
+            <div class="flex items-center justify-between border-b border-[#1a1f2c] pb-3">
+                <h3 class="text-xs font-bold text-white uppercase tracking-wider">Create Custom Policy Rule</h3>
+                <button onclick="closeNewRuleModal()" class="text-slate-400 hover:text-white"><i data-lucide="x" class="w-4 h-4"></i></button>
+            </div>
+            <form id="newRuleForm" onsubmit="handleCreatePolicyRule(event)" class="space-y-3 text-xs">
+                <div>
+                    <label class="text-[11px] font-semibold text-slate-300 block mb-1">Rule Code</label>
+                    <input type="text" id="ruleInCode" required placeholder="e.g. RULE-201" class="font-mono">
+                </div>
+                <div>
+                    <label class="text-[11px] font-semibold text-slate-300 block mb-1">Rule Name</label>
+                    <input type="text" id="ruleInName" required placeholder="e.g. Large Cross-Border Transfer Intercept">
+                </div>
+                <div>
+                    <label class="text-[11px] font-semibold text-slate-300 block mb-1">Description</label>
+                    <input type="text" id="ruleInDesc" placeholder="Brief rationale for compliance log...">
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-300 block mb-1">Target Field</label>
+                        <select id="ruleInField">
+                            <option value="amount">amount</option>
+                            <option value="hour">hour</option>
+                            <option value="geo_velocity">geo_velocity</option>
+                            <option value="velocity_5m">velocity_5m</option>
+                            <option value="balance_depletion_ratio">balance_depletion_ratio</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-300 block mb-1">Operator</label>
+                        <select id="ruleInOp">
+                            <option value=">">&gt; (Greater)</option>
+                            <option value="<">&lt; (Less)</option>
+                            <option value=">=">&gt;= (GTE)</option>
+                            <option value="<=">&lt;= (LTE)</option>
+                            <option value="==">== (Equal)</option>
+                            <option value="!=">!= (Not Equal)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-300 block mb-1">Threshold Value</label>
+                        <input type="text" id="ruleInVal" required placeholder="50000" class="font-mono">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-300 block mb-1">Enforced Action</label>
+                        <select id="ruleInAction">
+                            <option value="FORCE_BLOCK">FORCE_BLOCK</option>
+                            <option value="REQUIRE_MFA">REQUIRE_MFA</option>
+                            <option value="FAST_PASS">FAST_PASS</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-[11px] font-semibold text-slate-300 block mb-1">Priority</label>
+                        <input type="number" id="ruleInPriority" value="5" min="1" max="50">
+                    </div>
+                </div>
+                <div class="pt-3 border-t border-[#1a1f2c] flex justify-end space-x-2">
+                    <button type="button" onclick="closeNewRuleModal()" class="px-3.5 py-1.5 bg-[#0e1118] text-slate-300 rounded-lg text-xs">Cancel</button>
+                    <button type="submit" class="btn-primary text-xs py-1.5 px-4">Register Rule</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- SAR Regulatory Report Modal -->
+    <div id="sarModal" class="fixed inset-0 bg-black/85 backdrop-blur-md hidden items-center justify-center z-50 p-4">
+        <div class="cyber-card max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl border border-[#262d3e]">
+            <div class="p-4 border-b border-[#1a1f2c] flex items-center justify-between bg-[#05070a]">
+                <div class="flex items-center space-x-2">
+                    <div class="p-1 bg-indigo-500/20 text-indigo-400 rounded">
+                        <i data-lucide="file-check" class="w-4 h-4"></i>
+                    </div>
+                    <h3 class="text-xs font-bold text-white uppercase tracking-wider">Regulatory Suspicious Activity Report (SAR)</h3>
+                </div>
+                <button onclick="closeSarModal()" class="text-slate-400 hover:text-white p-1">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <div class="p-4 overflow-y-auto flex-1 font-mono text-[11px] text-slate-300 whitespace-pre-wrap bg-black m-4 rounded-lg border border-[#1a1f2c]" id="sarModalContent">
+                Loading certified SAR documentation...
+            </div>
+            <div class="p-3.5 border-t border-[#1a1f2c] bg-[#05070a] flex justify-end space-x-2">
+                <button onclick="copySarText()" class="px-3.5 py-1.5 bg-[#0e1118] hover:bg-[#131722] text-slate-200 text-xs rounded-lg border border-[#262d3e] transition flex items-center gap-1.5 font-medium">
+                    <i data-lucide="copy" class="w-3.5 h-3.5 text-slate-300"></i>
+                    <span>Copy Report</span>
+                </button>
+                <button onclick="closeSarModal()" class="btn-primary text-xs py-1.5 px-4 font-semibold">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Environment Reset Modal -->
+    <div id="resetConfirmModal" class="fixed inset-0 bg-black/85 backdrop-blur-md hidden items-center justify-center z-50 p-4">
+        <div class="cyber-card max-w-md w-full p-5 space-y-4 border border-rose-500/30">
+            <div class="flex items-center space-x-3 border-b border-[#1a1f2c] pb-3">
+                <div class="w-8 h-8 rounded-lg bg-rose-500/20 text-rose-400 flex items-center justify-center">
+                    <i data-lucide="alert-triangle" class="w-4 h-4 text-rose-400"></i>
+                </div>
+                <div>
+                    <h3 class="text-xs font-bold text-white uppercase tracking-wider">Reset Environment</h3>
+                    <p class="text-[11px] text-slate-400">Choose how you want to reset system state & data</p>
+                </div>
+            </div>
+            
+            <p class="text-xs text-slate-300 leading-relaxed">
+                This action will reset the database records, clear active money mule graphs, purge velocity counters, reset drift monitors, and restore baseline policy rules.
+            </p>
+
+            <div class="space-y-2 pt-1">
+                <button onclick="executeSystemReset(true)" class="w-full text-left p-3 rounded-lg bg-[#0e1118] hover:bg-[#131722] border border-[#262d3e] hover:border-indigo-500/50 transition flex items-center justify-between group">
+                    <div>
+                        <span class="text-xs font-bold text-white block group-hover:text-indigo-300">Reset & Seed Clean Demo Dataset</span>
+                        <span class="text-[10.5px] text-slate-400 block mt-0.5">Restores 75 verified multi-scenario records & money mule rings</span>
+                    </div>
+                    <i data-lucide="sparkles" class="w-4 h-4 text-indigo-400"></i>
+                </button>
+
+                <button onclick="executeSystemReset(false)" class="w-full text-left p-3 rounded-lg bg-[#0e1118] hover:bg-[#131722] border border-[#262d3e] hover:border-rose-500/50 transition flex items-center justify-between group">
+                    <div>
+                        <span class="text-xs font-bold text-white block group-hover:text-rose-300">Purge Everything (Blank Slate)</span>
+                        <span class="text-[10.5px] text-slate-400 block mt-0.5">Clears all records to 0 for fresh manual testing</span>
+                    </div>
+                    <i data-lucide="trash-2" class="w-4 h-4 text-rose-400"></i>
+                </button>
+            </div>
+
+            <div class="pt-3 border-t border-[#1a1f2c] flex justify-end">
+                <button onclick="closeResetModal()" class="px-4 py-1.5 bg-[#0e1118] text-slate-300 rounded-lg text-xs font-semibold hover:text-white">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notifications Container -->
+    <div id="toastContainer"></div>
+
+    <script src="/static/js/app.js?v=2.5"></script>
     <script>
         lucide.createIcons();
     </script>

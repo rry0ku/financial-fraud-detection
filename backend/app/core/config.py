@@ -4,7 +4,7 @@ Supports environment variables and .env file overrides.
 """
 
 import os
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -24,9 +24,7 @@ class Settings(BaseSettings):
     FLAG_THRESHOLD: float = float(os.getenv("FLAG_THRESHOLD", "0.30"))
     BLOCK_THRESHOLD: float = float(os.getenv("BLOCK_THRESHOLD", "0.75"))
 
-    class Config:
-        case_sensitive = True
-        env_file = ".env"
+    model_config = SettingsConfigDict(case_sensitive=True, env_file=".env")
 
 
 settings = Settings()

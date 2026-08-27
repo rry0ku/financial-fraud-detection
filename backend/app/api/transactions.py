@@ -40,11 +40,13 @@ def get_transactions(
     total_count = query.count()
     records = query.order_by(desc(TransactionRecord.timestamp)).offset(offset).limit(limit).all()
 
+    dict_records = [r.to_dict() for r in records]
     return {
         "total": total_count,
         "limit": limit,
         "offset": offset,
-        "transactions": [r.to_dict() for r in records]
+        "transactions": dict_records,
+        "items": dict_records
     }
 
 
